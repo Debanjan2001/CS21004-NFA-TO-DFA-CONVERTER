@@ -4,6 +4,7 @@ Roll number - 19CS30014
 ********************************/
 
 #include<iostream>
+#include<cstring>
 #include<fstream>
 using namespace std;
 
@@ -77,9 +78,13 @@ class DFA
         // Transition Table
         unsigned int** transition;
 
+        // number of final states. stored to save running time 
+        int numFinalStates;
+
         DFA()
         {
             n = 0,m = 0;
+            numFinalStates = 0;
             StartState = 0;
             FinalState = SetOfStates();
             transition = NULL;
@@ -231,7 +236,6 @@ void printNFA(NFA& N)
 
 void printDFA(DFA& D)
 {
-    cout<<"++++ INPUT NFA"<<endl;
     cout<<"     Number of States: "<<D.n<<endl;
     
     int printCount = 0;
@@ -247,20 +251,41 @@ void printDFA(DFA& D)
     cout<<"}"<<endl;
 
     cout<<"     Start State: "<<D.StartState<<endl;
-    int statecount = 0;
-    for(int i=0;i<D.FinalState.size;i++)
-    {
-        for(int j=0;j<32;j++)
-        {
-            if( (D.FinalState.arr[i] &(1U<<j)) )
-                statecount++;
-        }
-    }
-    cout<<"     "<<statecount<<" final states"<<endl;
+    
+    cout<<"     "<<D.numFinalStates<<" final states"<<endl;
 
     //Transition Function
-    cout<<"     Trasition function: "<<((D.n>64)?"Skipped":"")<<endl;
+    cout<<"     Trasition function: ";
+    if(D.n>64)
+    {
+        cout<<"Skipped"<<endl;
+        return;
+    }
+    cout<<endl;
     //TO be written.
+    cout<<"     a\\p|";
+    for(int i=0;i<D.n;i++)
+    {
+        printf("%2d ",i);
+    }
+    cout<<"\n";
+    cout<<"     ---+";
+    for(int i=0;i<D.n;i++)
+    {
+        printf("---");
+    }
+
+    cout<<"\n";
+    for(int i=0;i<D.m;i++)
+    {
+        cout<<"      "<<i<<" |";
+        for(int j=0;j<D.n;j++)
+        {
+            printf("%2d ",D.transition[j][i]);
+        }
+        cout<<endl;
+    }
+
 }
 
 
@@ -278,7 +303,8 @@ void subsetcons(NFA& N,DFA& D)
     //Final States
     int size = (n/32)+1;
     D.FinalState.size = size;
-    D.FinalState.arr = new unsigned int[size];
+    D.FinalState.arr = new unsigned int[size]();
+    // memset(D.FinalState.arr,0,sizeof(D.FinalState.arr)); 
 
     unsigned int F = N.FinalState;
 
@@ -288,8 +314,11 @@ void subsetcons(NFA& N,DFA& D)
         {
             int index = i/32;
             int pos = i%32;
-
-            D.FinalState.arr[index] |= (1U<<pos); 
+            if( (D.FinalState.arr[index]&(1U<<pos))!=1 )
+            {
+                D.numFinalStates++;
+                D.FinalState.arr[index] |= (1U<<pos);
+            } 
         }
     }
 
@@ -312,14 +341,14 @@ void subsetcons(NFA& N,DFA& D)
     }
 }
 
-void dfs(DFA& D,int current_state,bool vis[])
+void dfs(DFA& D,int currentState,bool vis[])
 {
-    vis[current_state] = true;
+    vis[currentState] = true;
     for(int i=0;i<D.m;i++)
     {
-        if(!vis[D.transition[current_state][i]])
+        if(!vis[D.transition[currentState][i]])
         {
-            dfs(D,D.transition[current_state][i],vis);
+            dfs(D,D.transition[currentState][i],vis);
         }
     }
 }
@@ -331,12 +360,13 @@ void findreachable(DFA& D,SetOfStates& R)
         vis[i] = false;
     
     R.arr = new unsigned int[D.n];
-    R.size = D.n;
+    memset(R.arr,0,sizeof(R.arr));
+    R.size = (D.n)/32 + 1 ;
 
     dfs(D,D.StartState,vis);
     
     int printCount = 0;
-    cout<<"++++  Reachable States:{";
+    cout<<"++++ Reachable States:{";
     for(int i=0;i<D.n;i++)
     {
         if(vis[i])
@@ -349,14 +379,68 @@ void findreachable(DFA& D,SetOfStates& R)
             R.arr[i/32] |= (1U<<(i%32));
         }
     }
-    cout<<"}"<<endl;
+    cout<<"}\n"<<endl;
 
-   delete vis; 
+    delete vis; 
 }
 
 void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
 {
+    unsigned int* stateMapping = new unsigned int[D.n];
 
+    int newStateCounter = 0;
+    for(int i=0;i<R.size;i++)
+    {
+        for(int j=0;j<32;j++)
+        {   
+            if( (R.arr[i] & (1U<<j)) )
+            {
+                stateMapping[32*i+j] = newStateCounter++;
+            }
+        }
+    }
+
+    D_prime.n = newStateCounter;
+    D_prime.m = D.m;
+    D_prime.StartState = stateMapping[D.StartState];
+    
+    int finalStateSize = newStateCounter/32 + 1;
+    D_prime.FinalState.size = finalStateSize;
+    D_prime.FinalState.arr = new unsigned int[finalStateSize];
+    memset(D_prime.FinalState.arr,0,sizeof(D_prime.FinalState.arr));
+   
+    D_prime.transition = new unsigned int*[D_prime.n];
+    for(int i=0;i<D_prime.n;i++)
+    {
+        D_prime.transition[i] = new unsigned int[D_prime.m];
+    }
+
+    for(int i=0;i<R.size;i++)
+    {
+        for(int j=0;j<32;j++)
+        {   
+            if( (R.arr[i] & (1U<<j)) )
+            {
+                int oldMapping = 32*i+j;
+                int newMapping = stateMapping[oldMapping];
+                
+                int index = newMapping/32;
+                int pos = newMapping%32;
+                if( (D_prime.FinalState.arr[index] & (1U<<pos))!=1 )
+                {
+                    D_prime.numFinalStates++;
+                    D_prime.FinalState.arr[index] |= (1U<<(newMapping%32));
+                }
+
+                for(int a=0;a<D_prime.m;a++)
+                {
+                    D_prime.transition[newMapping][a] = stateMapping[D.transition[oldMapping][a]] ;
+                }
+            }
+        }
+    }
+
+    delete stateMapping;
 }
 
 int main()
@@ -372,6 +456,7 @@ int main()
 
     DFA D;
     subsetcons(N,D);
+    cout<<"++++ Converted  DFA"<<endl;
     printDFA(D);
     cout<<endl;
     
@@ -380,6 +465,10 @@ int main()
 
     DFA D_prime;
     rmunreachable(D,R,D_prime);
+    
+    cout<<"++++ Reduced DFA after removing unreachable states"<<endl;
+    printDFA(D_prime);
+
 
     return 0;
 }
