@@ -4,7 +4,6 @@ Roll number - 19CS30014
 ********************************/
 
 #include<iostream>
-#include<cstring>
 #include<fstream>
 using namespace std;
 
@@ -59,7 +58,6 @@ class SetOfStates
             if(arr)
             {
                 delete arr;
-                cout<<"Success"<<endl;
             }
         }
 
@@ -252,7 +250,27 @@ void printDFA(DFA& D)
 
     cout<<"     Start State: "<<D.StartState<<endl;
     
-    cout<<"     "<<D.numFinalStates<<" final states"<<endl;
+    if(D.numFinalStates>=64)
+        cout<<"     "<<D.numFinalStates<<" final states"<<endl;
+    else
+    {
+        cout<<"     Final States:"<< D.numFinalStates<<" {";
+        printCount = 0;
+        for(int i=0;i<D.FinalState.size;i++)
+        {
+            for(int j=0;j<32;j++)
+            {
+                if(D.FinalState.arr[i] & (1U<<j) ) 
+                {
+                    if(printCount)
+                        cout<<",";
+                    cout<<32*i+j;
+                    printCount++;
+                }
+            }
+        }
+        cout<<"}"<<endl;
+    }
 
     //Transition Function
     cout<<"     Trasition function: ";
@@ -303,8 +321,11 @@ void subsetcons(NFA& N,DFA& D)
     //Final States
     int size = (n/32)+1;
     D.FinalState.size = size;
-    D.FinalState.arr = new unsigned int[size]();
-    // memset(D.FinalState.arr,0,sizeof(D.FinalState.arr)); 
+    D.FinalState.arr = new unsigned int[size];
+    for(int i=0;i<size;i++)
+    {
+        D.FinalState.arr[i] = 0;
+    }
 
     unsigned int F = N.FinalState;
 
@@ -314,7 +335,8 @@ void subsetcons(NFA& N,DFA& D)
         {
             int index = i/32;
             int pos = i%32;
-            if( (D.FinalState.arr[index]&(1U<<pos))!=1 )
+
+            if( (D.FinalState.arr[index]&(1U<<pos))== 0 )
             {
                 D.numFinalStates++;
                 D.FinalState.arr[index] |= (1U<<pos);
@@ -359,9 +381,13 @@ void findreachable(DFA& D,SetOfStates& R)
     for(int i=0;i<D.n;i++)
         vis[i] = false;
     
-    R.arr = new unsigned int[D.n];
-    memset(R.arr,0,sizeof(R.arr));
+    R.arr = new unsigned int[D.n/32+1];
     R.size = (D.n)/32 + 1 ;
+
+    for(int i=0;i<R.size;i++)
+    {
+        R.arr[i] = 0;
+    }
 
     dfs(D,D.StartState,vis);
     
@@ -407,12 +433,19 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
     int finalStateSize = newStateCounter/32 + 1;
     D_prime.FinalState.size = finalStateSize;
     D_prime.FinalState.arr = new unsigned int[finalStateSize];
-    memset(D_prime.FinalState.arr,0,sizeof(D_prime.FinalState.arr));
+    for(int i=0;i<finalStateSize;i++)
+    {
+        D_prime.FinalState.arr[i] = 0;
+    }
    
     D_prime.transition = new unsigned int*[D_prime.n];
     for(int i=0;i<D_prime.n;i++)
     {
         D_prime.transition[i] = new unsigned int[D_prime.m];
+        for(int j=0;j<D_prime.m;j++)
+        {
+            D_prime.transition[i][j] = 0;
+        }
     }
 
     for(int i=0;i<R.size;i++)
@@ -426,10 +459,13 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
                 
                 int index = newMapping/32;
                 int pos = newMapping%32;
-                if( (D_prime.FinalState.arr[index] & (1U<<pos))!=1 )
+                if( (D.FinalState.arr[i] & (1U<<j)) )
                 {
-                    D_prime.numFinalStates++;
-                    D_prime.FinalState.arr[index] |= (1U<<(newMapping%32));
+                    if( (D_prime.FinalState.arr[index] & (1U<<pos))== 0 )
+                    {
+                        D_prime.numFinalStates++;
+                        D_prime.FinalState.arr[index] |= (1U<<(pos));
+                    }    
                 }
 
                 for(int a=0;a<D_prime.m;a++)
