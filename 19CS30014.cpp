@@ -254,7 +254,7 @@ void printDFA(DFA& D)
         cout<<"     "<<D.numFinalStates<<" final states"<<endl;
     else
     {
-        cout<<"     Final States:"<< D.numFinalStates<<" {";
+        cout<<"     Final States: {";
         printCount = 0;
         for(int i=0;i<D.FinalState.size;i++)
         {
@@ -336,7 +336,7 @@ void subsetcons(NFA& N,DFA& D)
             int index = i/32;
             int pos = i%32;
 
-            if( (D.FinalState.arr[index]&(1U<<pos))== 0 )
+            if( (D.FinalState.arr[index]&(1U<<pos)) == 0 )
             {
                 D.numFinalStates++;
                 D.FinalState.arr[index] |= (1U<<pos);
@@ -392,7 +392,7 @@ void findreachable(DFA& D,SetOfStates& R)
     dfs(D,D.StartState,vis);
     
     int printCount = 0;
-    cout<<"++++ Reachable States:{";
+    cout<<"++++ Reachable States: {";
     for(int i=0;i<D.n;i++)
     {
         if(vis[i])
