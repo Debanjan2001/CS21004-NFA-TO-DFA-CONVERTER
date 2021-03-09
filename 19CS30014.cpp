@@ -277,7 +277,6 @@ void subsetcons(NFA& N,DFA& D)
 
     //Final States
     int size = (n/32)+1;
-
     D.FinalState.size = size;
     D.FinalState.arr = new unsigned int[size];
 
