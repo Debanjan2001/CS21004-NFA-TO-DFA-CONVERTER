@@ -273,7 +273,7 @@ void printDFA(DFA& D)
     }
 
     //Transition Function
-    cout<<"     Trasition function: ";
+    cout<<"     Transition function: ";
     if(D.n>64)
     {
         cout<<"Skipped"<<endl;
@@ -479,6 +479,65 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
     delete stateMapping;
 }
 
+void findequiv(DFA& D,bool** M)
+{
+    M = new bool*[D.n];
+    for(int i=0;i<D.n;i++)
+    {
+        M[i] = new bool[D.n];
+        for(int j=0;j<D.n;j++)
+        {
+            M[i][j] = 0;
+        }
+    }
+
+    for(int p=0;p<D.n;p++)
+    {
+        for(int q=0;q<D.n;q++)
+        {
+            if(p==q || M[p][q] || M[q][p])
+                    continue;
+            
+            int ind1 =p/32 ,ind2 = q/32;
+            int pos1 = p%32, pos2 = q%32;
+
+            if( ( (D.FinalState.arr[ind1] & (1U<<pos1)) && !(D.FinalState.arr[ind2] & (1U<<pos2)) ) || ( !(D.FinalState.arr[ind1] & (1U<<pos1)) && (D.FinalState.arr[ind2] & (1U<<pos2)) ) )
+            {
+                M[p][q] = true;
+                M[q][p] = true;
+            }
+        }
+    }
+
+    while(true)
+    {
+        bool flag = 0;
+
+        for(int p=0;p<D.n;p++)
+        {
+            for(int q=0;q<D.n;q++)
+            {
+                if(p==q || M[p][q] || M[q][p])
+                    continue;
+                for(int a=0;a<D.m;a++)
+                {
+                    if(M[D.transition[p][a]][D.transition[q][a]])
+                    {
+                        flag = 1;
+                        M[p][q] = true;
+                        M[q][p] = true;
+                    }
+                }
+            }
+        }
+
+        if(!flag)
+            break;
+    }
+}
+
+void collapse()
+
 int main()
 {
     string file = "input.txt";
@@ -505,7 +564,18 @@ int main()
     cout<<"++++ Reduced DFA after removing unreachable states"<<endl;
     printDFA(D_prime);
 
+    bool **M = NULL;
+    findequiv(D_prime,M);
 
+    if(M)
+    {
+        for(int i=0;i<sizeof(M)/sizeof(bool *);i++)
+        {
+            if(M[i])
+                delete M[i];
+        }
+        delete M;
+    }
     return 0;
 }
 
