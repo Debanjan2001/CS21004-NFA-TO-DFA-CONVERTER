@@ -27,8 +27,8 @@ class NFA
             transition = NULL;
         }
 
-        // Free Space upon destruction
-        ~NFA()
+        // Free Space as soon as non relevant
+        void freeNFA()
         {
             for(int i=0;i<n;i++)
             {
@@ -53,7 +53,8 @@ class SetOfStates
             arr = NULL;
         }
 
-        ~SetOfStates()
+        // Free Space as soon as non relevant
+        void freeSetOfStates()
         {
             if(arr)
             {
@@ -88,16 +89,20 @@ class DFA
             transition = NULL;
         }
 
-        ~DFA()
+        // Free Space as soon as non relevant
+        void freeDFA()
         {
             for(int i=0;i<n;i++)
             {
                 if(transition[i])
                     delete transition[i];
             }
-
             if(transition)
+            {
                 delete transition;
+                transition = NULL;
+            }
+            FinalState.freeSetOfStates();
         }
 };
 
@@ -306,7 +311,6 @@ void printDFA(DFA& D)
 
 }
 
-
 // NFA to DFA Converter
 void subsetcons(NFA& N,DFA& D)
 {
@@ -410,7 +414,7 @@ void findreachable(DFA& D,SetOfStates& R)
     delete vis; 
 }
 
-void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
+void rmunreachable(DFA& D,SetOfStates& R,DFA& D1)
 {
     unsigned int* stateMapping = new unsigned int[D.n];
 
@@ -426,25 +430,25 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
         }
     }
 
-    D_prime.n = newStateCounter;
-    D_prime.m = D.m;
-    D_prime.StartState = stateMapping[D.StartState];
+    D1.n = newStateCounter;
+    D1.m = D.m;
+    D1.StartState = stateMapping[D.StartState];
     
     int finalStateSize = newStateCounter/32 + 1;
-    D_prime.FinalState.size = finalStateSize;
-    D_prime.FinalState.arr = new unsigned int[finalStateSize];
+    D1.FinalState.size = finalStateSize;
+    D1.FinalState.arr = new unsigned int[finalStateSize];
     for(int i=0;i<finalStateSize;i++)
     {
-        D_prime.FinalState.arr[i] = 0;
+        D1.FinalState.arr[i] = 0;
     }
    
-    D_prime.transition = new unsigned int*[D_prime.n];
-    for(int i=0;i<D_prime.n;i++)
+    D1.transition = new unsigned int*[D1.n];
+    for(int i=0;i<D1.n;i++)
     {
-        D_prime.transition[i] = new unsigned int[D_prime.m];
-        for(int j=0;j<D_prime.m;j++)
+        D1.transition[i] = new unsigned int[D1.m];
+        for(int j=0;j<D1.m;j++)
         {
-            D_prime.transition[i][j] = 0;
+            D1.transition[i][j] = 0;
         }
     }
 
@@ -461,16 +465,16 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
                 int pos = newMapping%32;
                 if( (D.FinalState.arr[i] & (1U<<j)) )
                 {
-                    if( (D_prime.FinalState.arr[index] & (1U<<pos))== 0 )
+                    if( (D1.FinalState.arr[index] & (1U<<pos))== 0 )
                     {
-                        D_prime.numFinalStates++;
-                        D_prime.FinalState.arr[index] |= (1U<<(pos));
+                        D1.numFinalStates++;
+                        D1.FinalState.arr[index] |= (1U<<(pos));
                     }    
                 }
 
-                for(int a=0;a<D_prime.m;a++)
+                for(int a=0;a<D1.m;a++)
                 {
-                    D_prime.transition[newMapping][a] = stateMapping[D.transition[oldMapping][a]] ;
+                    D1.transition[newMapping][a] = stateMapping[D.transition[oldMapping][a]] ;
                 }
             }
         }
@@ -481,21 +485,11 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
 
 void findequiv(DFA& D,bool** M)
 {
-    M = new bool*[D.n];
-    for(int i=0;i<D.n;i++)
-    {
-        M[i] = new bool[D.n];
-        for(int j=0;j<D.n;j++)
-        {
-            M[i][j] = 0;
-        }
-    }
-
     for(int p=0;p<D.n;p++)
     {
-        for(int q=0;q<D.n;q++)
+        for(int q=p+1;q<D.n;q++)
         {
-            if(p==q || M[p][q] || M[q][p])
+            if(M[p][q] || M[q][p])
                     continue;
             
             int ind1 =p/32 ,ind2 = q/32;
@@ -515,9 +509,9 @@ void findequiv(DFA& D,bool** M)
 
         for(int p=0;p<D.n;p++)
         {
-            for(int q=0;q<D.n;q++)
+            for(int q=p+1;q<D.n;q++)
             {
-                if(p==q || M[p][q] || M[q][p])
+                if(M[p][q] || M[q][p])
                     continue;
                 for(int a=0;a<D.m;a++)
                 {
@@ -536,7 +530,95 @@ void findequiv(DFA& D,bool** M)
     }
 }
 
-void collapse()
+void collapse(DFA& D1,bool** M,DFA& D2)
+{
+    //Equivalent States
+    cout<<"++++ Equivalent states\n";
+    bool vis[D1.n];
+    int stateMapping[D1.n];
+    for(int i=0;i<D1.n;i++)
+    {
+        vis[i] = false;
+        stateMapping[i] = i;
+    }
+    int stateCnt=0;
+    for(int i=0;i<D1.n;i++)
+    {
+        if(vis[i])
+            continue;
+        cout<<"     Group "<<stateCnt<<": {"<<i;
+        vis[i]=1;
+        stateMapping[i] = stateCnt;
+        for(int j=i+1;j<D1.n;j++)
+        {
+            if(vis[j] || M[i][j] || M[j][i]) 
+                continue;
+            cout<<","<<j;
+            vis[j]=1;
+            stateMapping[j] = stateCnt;
+        }
+        stateCnt++;
+        cout<<"}\n";
+    }
+    cout<<"\n";
+
+    //DFA Collapse
+    D2.n = stateCnt;
+    D2.m = D1.m;
+
+    int finalStateSize = 1 + stateCnt/32;
+    D2.FinalState.arr = new unsigned int[finalStateSize];
+    D2.FinalState.size = finalStateSize;
+
+    D2.transition = new unsigned int*[stateCnt];
+    for(int i=0;i<stateCnt;i++)
+    {
+        D2.transition[i] = new unsigned int[D2.m];
+        for(int j=0;j<D2.m;j++)
+        {
+            D2.transition[i][j] = 0;
+        }
+    }
+
+    for(int i=0;i<finalStateSize;i++)
+    {
+        D2.FinalState.arr[i] = 0;
+    }
+
+    D2.StartState = stateMapping[D1.StartState];
+
+    for(int i=0;i<D1.FinalState.size;i++)
+    {
+        for(int j=0;j<32;j++)
+        {
+            if( D1.FinalState.arr[i]&(1U<<j) )
+            {
+                int oldState = 32*i+j;
+                int newState = stateMapping[oldState];
+
+                int index = newState/32;
+                int pos = newState%32;
+
+                if( (D2.FinalState.arr[index]&(1U<<pos)) == 0 ) 
+                {
+                    D2.numFinalStates++;
+                    D2.FinalState.arr[index] |= (1U<<pos);
+                } 
+            }
+        }
+    }
+
+    for(int i=0;i<D1.n;i++)
+    {
+        for(int j=0;j<D2.m;j++)
+        {
+            int newState = stateMapping[i];
+            D2.transition[newState][j] |= stateMapping[D1.transition[i][j]];
+        }
+    }
+
+
+}
 
 int main()
 {
@@ -558,14 +640,34 @@ int main()
     SetOfStates R;
     findreachable(D,R);
 
-    DFA D_prime;
-    rmunreachable(D,R,D_prime);
-    
-    cout<<"++++ Reduced DFA after removing unreachable states"<<endl;
-    printDFA(D_prime);
+    DFA D1;
+    rmunreachable(D,R,D1);
+    D.freeDFA();
 
-    bool **M = NULL;
-    findequiv(D_prime,M);
+    cout<<"++++ Reduced DFA after removing unreachable states"<<endl;
+    printDFA(D1);
+    cout<<endl;
+
+    bool** M = new bool*[D1.n];
+    for(int i=0;i<D1.n;i++)
+    {
+        M[i] = new bool[D1.n];
+        for(int j=0;j<D1.n;j++)
+        {
+            M[i][j] = false;
+        }
+    }
+    findequiv(D1,M);
+
+    DFA D2;
+    collapse(D1,M,D2);
+
+    D1.freeDFA();
+
+    cout<<"++++ Reduced DFA after collapsing equivalent states"<<endl;
+    printDFA(D2);
+
+    D2.freeDFA();
 
     if(M)
     {
@@ -576,6 +678,8 @@ int main()
         }
         delete M;
     }
+
+    cout<<(D.transition == NULL);
     return 0;
 }
 
