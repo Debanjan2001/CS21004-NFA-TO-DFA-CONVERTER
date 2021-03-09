@@ -269,7 +269,7 @@ void subsetcons(NFA& N,DFA& D)
 {
     //New sizes
     int n =(1<<N.n), m = N.m;
-    D.n= n;
+    D.n = n;
     D.m = m;
 
     // Start State 
@@ -300,15 +300,63 @@ void subsetcons(NFA& N,DFA& D)
         D.transition[i] = new unsigned int[m];
         for(int j=0;j<m;j++)
         {
+            D.transition[i][j] = 0;
             for(int k=0;k<N.n;k++)
             {
-                if( i & k )
+                if( (i & (1U<<k)) )
                 {
-                    D.transition[i][j] |= N.transition[k][j];
+                    D.transition[i][j] |= (N.transition[k][j]);
                 }
             }
         }
     }
+}
+
+void dfs(DFA& D,int current_state,bool vis[])
+{
+    vis[current_state] = true;
+    for(int i=0;i<D.m;i++)
+    {
+        if(!vis[D.transition[current_state][i]])
+        {
+            dfs(D,D.transition[current_state][i],vis);
+        }
+    }
+}
+
+void findreachable(DFA& D,SetOfStates& R)
+{
+    bool *vis = new bool[D.n];
+    for(int i=0;i<D.n;i++)
+        vis[i] = false;
+    
+    R.arr = new unsigned int[D.n];
+    R.size = D.n;
+
+    dfs(D,D.StartState,vis);
+    
+    int printCount = 0;
+    cout<<"++++  Reachable States:{";
+    for(int i=0;i<D.n;i++)
+    {
+        if(vis[i])
+        {   
+            if(printCount)
+                cout<<",";
+            cout<<i;
+            printCount++;
+            
+            R.arr[i/32] |= (1U<<(i%32));
+        }
+    }
+    cout<<"}"<<endl;
+
+   delete vis; 
+}
+
+void rmunreachable(DFA& D,SetOfStates& R,DFA& D_prime)
+{
+
 }
 
 int main()
@@ -320,11 +368,18 @@ int main()
     NFA N;
     readNFA(file,N);
     printNFA(N);
+    cout<<endl;
 
     DFA D;
     subsetcons(N,D);
     printDFA(D);
+    cout<<endl;
     
+    SetOfStates R;
+    findreachable(D,R);
+
+    DFA D_prime;
+    rmunreachable(D,R,D_prime);
 
     return 0;
 }
