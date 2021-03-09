@@ -100,7 +100,6 @@ class DFA
             if(transition)
             {
                 delete transition;
-                transition = NULL;
             }
             FinalState.freeSetOfStates();
         }
@@ -679,7 +678,6 @@ int main()
         delete M;
     }
 
-    cout<<(D.transition == NULL);
     return 0;
 }
 
