@@ -1,4 +1,4 @@
-all: compile run
+all: compile out
 
 compile:
 	g++ 19CS30014.cpp -o a.out

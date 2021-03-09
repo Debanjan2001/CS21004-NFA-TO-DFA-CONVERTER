@@ -41,6 +41,7 @@ class NFA
         }
 };
 
+// User defined Data structure for storing set of States in an array. 
 class SetOfStates
 {
     public:
@@ -64,6 +65,7 @@ class SetOfStates
 
 };
 
+// User defined Data structure for storing DFA
 class DFA
 {
     public:
@@ -171,12 +173,12 @@ void readNFA(string fileName,NFA& N)
 // Function to print NFA
 void printNFA(NFA& N)
 {
-    cout<<"++++ INPUT NFA"<<endl;
-    cout<<"     Number of States: "<<N.n<<endl;
+    cout<<"+++ INPUT NFA"<<endl;
+    cout<<"    Number of States: "<<N.n<<endl;
     
     int printCount = 0;
 
-    cout<<"     Number of Alphabet: {";
+    cout<<"    Number of Alphabet: {";
     for(int i=0;i<N.m;i++)
     {
         if(printCount)
@@ -187,7 +189,7 @@ void printNFA(NFA& N)
     cout<<"}"<<endl;
 
     printCount = 0;
-    cout<<"     Start States: {";
+    cout<<"    Start States: {";
     for(int i=0;i<N.n;i++)
     {
         if( (N.StartState & (1<<i)) )
@@ -201,7 +203,7 @@ void printNFA(NFA& N)
     cout<<"}"<<endl;
 
     printCount = 0;
-    cout<<"     Final States: {";
+    cout<<"    Final States: {";
     for(int i=0;i<N.n;i++)
     {
         if( (N.FinalState & (1<<i)) )
@@ -214,13 +216,13 @@ void printNFA(NFA& N)
     }
     cout<<"}"<<endl;
 
-    cout<<"     Transition Function"<<endl;
+    cout<<"    Transition Function"<<endl;
     for(int i=0;i<N.n;i++)
     {
         for(int j=0;j<N.m;j++)
         {
             printCount = 0;
-            cout<<"         Delta("<<i<<","<<j<<") = {";
+            cout<<"        Delta("<<i<<","<<j<<") = {";
             for(int k=0;k<N.n;k++)
             {
                 if( (N.transition[i][j] & (1<<k)) )
@@ -238,11 +240,11 @@ void printNFA(NFA& N)
 
 void printDFA(DFA& D)
 {
-    cout<<"     Number of States: "<<D.n<<endl;
+    cout<<"    Number of States: "<<D.n<<endl;
     
     int printCount = 0;
 
-    cout<<"     Number of Alphabet: {";
+    cout<<"    Number of Alphabet: {";
     for(int i=0;i<D.m;i++)
     {
         if(printCount)
@@ -252,13 +254,13 @@ void printDFA(DFA& D)
     }
     cout<<"}"<<endl;
 
-    cout<<"     Start State: "<<D.StartState<<endl;
+    cout<<"    Start State: "<<D.StartState<<endl;
     
     if(D.numFinalStates>=64)
-        cout<<"     "<<D.numFinalStates<<" final states"<<endl;
+        cout<<"    "<<D.numFinalStates<<" final states"<<endl;
     else
     {
-        cout<<"     Final States: {";
+        cout<<"    Final States: {";
         printCount = 0;
         for(int i=0;i<D.FinalState.size;i++)
         {
@@ -277,7 +279,7 @@ void printDFA(DFA& D)
     }
 
     //Transition Function
-    cout<<"     Transition function: ";
+    cout<<"    Transition function: ";
     if(D.n>64)
     {
         cout<<"Skipped"<<endl;
@@ -285,13 +287,13 @@ void printDFA(DFA& D)
     }
     cout<<endl;
     //TO be written.
-    cout<<"     a\\p|";
+    cout<<"    a\\p|";
     for(int i=0;i<D.n;i++)
     {
         printf("%2d ",i);
     }
     cout<<"\n";
-    cout<<"     ---+";
+    cout<<"    ---+";
     for(int i=0;i<D.n;i++)
     {
         printf("---");
@@ -300,7 +302,7 @@ void printDFA(DFA& D)
     cout<<"\n";
     for(int i=0;i<D.m;i++)
     {
-        cout<<"      "<<i<<" |";
+        cout<<"     "<<i<<" |";
         for(int j=0;j<D.n;j++)
         {
             printf("%2d ",D.transition[j][i]);
@@ -395,7 +397,7 @@ void findreachable(DFA& D,SetOfStates& R)
     dfs(D,D.StartState,vis);
     
     int printCount = 0;
-    cout<<"++++ Reachable States: {";
+    cout<<"+++ Reachable States: {";
     for(int i=0;i<D.n;i++)
     {
         if(vis[i])
@@ -532,7 +534,7 @@ void findequiv(DFA& D,bool** M)
 void collapse(DFA& D1,bool** M,DFA& D2)
 {
     //Equivalent States
-    cout<<"++++ Equivalent states\n";
+    cout<<"+++ Equivalent states\n";
     bool vis[D1.n];
     int stateMapping[D1.n];
     for(int i=0;i<D1.n;i++)
@@ -545,7 +547,8 @@ void collapse(DFA& D1,bool** M,DFA& D2)
     {
         if(vis[i])
             continue;
-        cout<<"     Group "<<stateCnt<<": {"<<i;
+
+        cout<<"    Group "<<stateCnt<<": {"<<i;
         vis[i]=1;
         stateMapping[i] = stateCnt;
         for(int j=i+1;j<D1.n;j++)
@@ -619,11 +622,11 @@ void collapse(DFA& D1,bool** M,DFA& D2)
 
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     string file = "input.txt";
-    // cout<<">> ENTER input_filename.extension ( example: input.txt ) :";
-    // cin>>file;
+    cout<<">> ENTER input_filename.extension ( example: input.txt ): ";
+    cin>>file;
     
     NFA N;
     readNFA(file,N);
@@ -632,7 +635,7 @@ int main()
 
     DFA D;
     subsetcons(N,D);
-    cout<<"++++ Converted  DFA"<<endl;
+    cout<<"+++ Converted  DFA"<<endl;
     printDFA(D);
     cout<<endl;
     
@@ -641,9 +644,10 @@ int main()
 
     DFA D1;
     rmunreachable(D,R,D1);
+
     D.freeDFA();
 
-    cout<<"++++ Reduced DFA after removing unreachable states"<<endl;
+    cout<<"+++ Reduced DFA after removing unreachable states"<<endl;
     printDFA(D1);
     cout<<endl;
 
@@ -663,7 +667,7 @@ int main()
 
     D1.freeDFA();
 
-    cout<<"++++ Reduced DFA after collapsing equivalent states"<<endl;
+    cout<<"+++ Reduced DFA after collapsing equivalent states"<<endl;
     printDFA(D2);
 
     D2.freeDFA();
@@ -675,9 +679,10 @@ int main()
             if(M[i])
                 delete M[i];
         }
-        delete M;
+
+        if(M)
+            delete M;
     }
 
     return 0;
 }
-
