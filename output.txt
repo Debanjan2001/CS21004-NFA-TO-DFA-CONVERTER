@@ -1,4 +1,4 @@
-+++ INPUT NFA
+>> ENTER input_filename.extension ( example: input.txt ): +++ INPUT NFA
     Number of States: 7
     Number of Alphabet: {0,1}
     Start States: {4}

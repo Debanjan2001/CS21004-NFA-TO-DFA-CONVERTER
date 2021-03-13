@@ -2,7 +2,6 @@
 Name - Debanjan Saha
 Roll number - 19CS30014
 ********************************/
-
 #include<iostream>
 #include<fstream>
 using namespace std;
@@ -115,9 +114,9 @@ void readNFA(string fileName,NFA& N)
     ifstream fin;
     fin.open(fileName.c_str());
 
-    if(!fin)
+    if(!fin.is_open())
     {
-        cout<<"ERROR in locating file.Keep it in same directory"<<endl;
+        cerr<<"ERROR in locating file.Keep it in same directory"<<endl;
         exit(0);
     }
     int n,m;
@@ -340,11 +339,12 @@ void subsetcons(NFA& N,DFA& D)
         {
             int index = i/32;
             int pos = i%32;
+            unsigned int power = (1U<<pos);
 
-            if( (D.FinalState.arr[index]&(1U<<pos)) == 0 )
+            if( (D.FinalState.arr[index]&power) == 0 )
             {
                 D.numFinalStates++;
-                D.FinalState.arr[index] |= (1U<<pos);
+                D.FinalState.arr[index] |= power;
             } 
         }
     }
@@ -627,7 +627,7 @@ int main(int argc, char *argv[])
     string file = "input.txt";
     cout<<">> ENTER input_filename.extension ( example: input.txt ): ";
     cin>>file;
-    
+
     NFA N;
     readNFA(file,N);
     printNFA(N);
@@ -682,7 +682,7 @@ int main(int argc, char *argv[])
 
         if(M)
             delete M;
-    }
+    } 
 
     return 0;
 }
