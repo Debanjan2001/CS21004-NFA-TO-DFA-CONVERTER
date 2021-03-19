@@ -116,7 +116,7 @@ void readNFA(string fileName,NFA& N)
 
     if(!fin.is_open())
     {
-        cerr<<"ERROR in locating file.Keep it in same directory"<<endl;
+        cerr<<"ERROR in locating file.Check filename/Keep it in same directory"<<endl;
         exit(0);
     }
     int n,m;
@@ -312,7 +312,7 @@ void printDFA(DFA& D)
 }
 
 // NFA to DFA Converter
-void subsetcons(NFA& N,DFA& D)
+DFA& subsetcons(NFA& N,DFA& D)
 {
     //New sizes
     int n =(1<<N.n), m = N.m;
@@ -366,6 +366,7 @@ void subsetcons(NFA& N,DFA& D)
             }
         }
     }
+    return D;
 }
 
 void dfs(DFA& D,int currentState,bool vis[])
@@ -380,7 +381,7 @@ void dfs(DFA& D,int currentState,bool vis[])
     }
 }
 
-void findreachable(DFA& D,SetOfStates& R)
+SetOfStates& findreachable(DFA& D,SetOfStates& R)
 {
     bool *vis = new bool[D.n];
     for(int i=0;i<D.n;i++)
@@ -413,9 +414,10 @@ void findreachable(DFA& D,SetOfStates& R)
     cout<<"}\n"<<endl;
 
     delete vis; 
+    return R;
 }
 
-void rmunreachable(DFA& D,SetOfStates& R,DFA& D1)
+DFA& rmunreachable(DFA& D,SetOfStates& R,DFA& D1)
 {
     unsigned int* stateMapping = new unsigned int[D.n];
 
@@ -482,10 +484,21 @@ void rmunreachable(DFA& D,SetOfStates& R,DFA& D1)
     }
 
     delete stateMapping;
+    return D1;
 }
 
-void findequiv(DFA& D,bool** M)
+bool** findequiv(DFA& D)
 {
+    bool** M = new bool*[D.n];
+    for(int i=0;i<D.n;i++)
+    {
+        M[i] = new bool[D.n];
+        for(int j=0;j<D.n;j++)
+        {
+            M[i][j] = false;
+        }
+    }
+
     for(int p=0;p<D.n;p++)
     {
         for(int q=p+1;q<D.n;q++)
@@ -529,9 +542,11 @@ void findequiv(DFA& D,bool** M)
         if(!flag)
             break;
     }
+
+    return M;
 }
 
-void collapse(DFA& D1,bool** M,DFA& D2)
+DFA& collapse(DFA& D1,bool** M,DFA& D2)
 {
     //Equivalent States
     cout<<"+++ Equivalent states\n";
@@ -619,10 +634,11 @@ void collapse(DFA& D1,bool** M,DFA& D2)
         }
     }
 
+    return D2;
 
 }
 
-int main(int argc, char *argv[])
+int main()
 {
     string file = "input.txt";
     cout<<">> ENTER input_filename.extension ( example: input.txt ): ";
@@ -633,17 +649,20 @@ int main(int argc, char *argv[])
     printNFA(N);
     cout<<endl;
 
-    DFA D;
-    subsetcons(N,D);
+    DFA D; 
+    D = subsetcons(N,D);
+    
     cout<<"+++ Converted  DFA"<<endl;
     printDFA(D);
     cout<<endl;
+
+    N.freeNFA();    
     
     SetOfStates R;
-    findreachable(D,R);
+    R = findreachable(D,R);
 
     DFA D1;
-    rmunreachable(D,R,D1);
+    D1 = rmunreachable(D,R,D1);
 
     D.freeDFA();
 
@@ -651,19 +670,11 @@ int main(int argc, char *argv[])
     printDFA(D1);
     cout<<endl;
 
-    bool** M = new bool*[D1.n];
-    for(int i=0;i<D1.n;i++)
-    {
-        M[i] = new bool[D1.n];
-        for(int j=0;j<D1.n;j++)
-        {
-            M[i][j] = false;
-        }
-    }
-    findequiv(D1,M);
-
+    
+    bool** M = findequiv(D1);
+    
     DFA D2;
-    collapse(D1,M,D2);
+    D2 = collapse(D1,M,D2);
 
     D1.freeDFA();
 
@@ -671,18 +682,6 @@ int main(int argc, char *argv[])
     printDFA(D2);
 
     D2.freeDFA();
-
-    if(M)
-    {
-        for(int i=0;i<sizeof(M)/sizeof(bool *);i++)
-        {
-            if(M[i])
-                delete M[i];
-        }
-
-        if(M)
-            delete M;
-    } 
 
     return 0;
 }
